@@ -8,6 +8,8 @@ import (
     "log"
     "bytes"
     "regexp"
+    "time"
+    "math/rand"
     )
 
 var server *string = flag.String("server", "irc.w3.org", "IRC Server Address")
@@ -16,6 +18,8 @@ var nick *string = flag.String("nick", "hatchetBot", "IRC handle")
 var channel *string = flag.String("chan", "#hummuschan", "IRC Channel")
 
 var approved = []string{"dslachut","hummus","OgreMonk","acan","patty"}
+var acts = []string{"slaps", "brofists", "chases", "examines", "flicks",
+                    "fondles", "mimics", "knifes", "surveils", "pokes"}
 
 func handle(msg *irc.Message, client *irc.Client) {
     fmt.Println(msg)
@@ -34,9 +38,18 @@ func handle(msg *irc.Message, client *irc.Client) {
         if err != nil {
             log.Print(err)
         } else if match {
+            act := acts[rand.Intn(len(acts))]
+            vic := approved[rand.Intn(len(approved))]
             client.Send("MODE %s +o %s", *channel, nym)
-            client.Send("PRIVMSG %s :\u0001ACTION tries to give %s ops, then slaps hummus \u0001", 
-            *channel, nym)
+            client.Send("PRIVMSG %s :\u0001ACTION tries to give %s ops, then %s %s \u0001",
+            *channel, nym, act, vic)
+        }
+    } else {
+        match,err := regexp.MatchString("opsplx", msg.String())
+        if err != nil {
+            log.Print(err)
+        } else if match {
+            client.Send("PRIVMSG %s :No ops for you, %s!", *channel, nym)
         }
     }
 }
@@ -45,6 +58,7 @@ func main(){
     runtime.GOMAXPROCS(runtime.NumCPU())
     fmt.Println(runtime.GOMAXPROCS(-1))
     flag.Parse()
+    rand.Seed(time.Now().Unix())
     
     client,err := irc.Connect(*server,*port)
     if err != nil {
