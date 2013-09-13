@@ -19,7 +19,7 @@ var channel *string = flag.String("chan", "#hummuschan", "IRC Channel")
 
 var approved = []string{"dslachut","hummus","OgreMonk","acan","patty"}
 var acts = []string{"slaps", "brofists", "chases", "examines", "flicks",
-                    "fondles", "mimics", "knifes", "surveils", "pokes"}
+                    "hugs", "mimics", "knifes", "surveils", "pokes"}
 
 func handle(msg *irc.Message, client *irc.Client) {
     fmt.Println(msg)
