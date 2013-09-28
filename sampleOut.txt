@@ -36,3 +36,48 @@ Command: PART
 Params: #shrektest
 Trailing:
 :shrek3!~shrek3@public.cloak PART #shrektest :
+
+8
+Prefix: public-irc.w3.org
+Sender:
+Command: 001
+Params: ShrekBot
+Trailing: Welcome to the Internet Relay Network ShrekBot!~bot@public.cloak
+:public-irc.w3.org 001 ShrekBot :Welcome to the Internet Relay Network ShrekBot!
+~bot@public.cloak
+Prefix: ShrekBot!~bot@public.cloak
+Sender: ShrekBot
+Command: JOIN
+Params:
+Trailing: #shrektest
+:ShrekBot!~bot@public.cloak JOIN :#shrektest
+Prefix: shrek!~shrek@public.cloak
+Sender: shrek
+Command: JOIN
+Params:
+Trailing: #shrektest
+:shrek!~shrek@public.cloak JOIN :#shrektest
+Prefix: shrek!~shrek@public.cloak
+Sender: shrek
+Command: PRIVMSG
+Params: ShrekBot
+Trailing: hello
+:shrek!~shrek@public.cloak PRIVMSG ShrekBot :hello
+Prefix: shrek!~shrek@public.cloak
+Sender: shrek
+Command: PRIVMSG
+Params: #shrektest
+Trailing: howdy
+:shrek!~shrek@public.cloak PRIVMSG #shrektest :howdy
+Prefix: shrek!~shrek@public.cloak
+Sender: shrek
+Command: PRIVMSG
+Params: ShrekBot
+Trailing: *op testpassword
+:shrek!~shrek@public.cloak PRIVMSG ShrekBot :*op testpassword
+Prefix: shrek!~shrek@public.cloak
+Sender: shrek
+Command: QUIT
+Params:
+Trailing: "Page closed"
+:shrek!~shrek@public.cloak QUIT :"Page closed"
