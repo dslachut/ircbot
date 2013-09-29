@@ -12,17 +12,16 @@ import (
 	"os"
 	"regexp"
 	"runtime"
-	"strings"
 	"time"
+	"path/filepath"
 )
 
 var settings struct {
-	Server   string
-	Port     int
-	Channel  string
-	Nick     string
+	Server  string
+	Port    int
+	Channel string
+	Nick    string
 	Password string
-	Greeting string
 }
 
 var server *string
@@ -43,7 +42,7 @@ func initialize() {
 		log.Fatal(err)
 	}
 
-	settingsFile, err := os.Open(wdir + string(os.PathSeparator) + "settings.cfg")
+	settingsFile, err := os.Open(wdir + filepath.Separator + "settings.cfg")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,7 +76,7 @@ func handle(msg *irc.Message, client *irc.Client) {
 			log.Print(err)
 		} else if match {
 			act := acts[rand.Intn(len(acts))]
-			vic := currentNicks[rand.Intn(len(currentNicks))]
+			vic := approved[rand.Intn(len(currentNicks))]
 			client.Send("MODE %s +o %s", *channel, nym)
 			client.Send("PRIVMSG %s :\u0001ACTION tries to give %s ops, then %s %s \u0001",
 				*channel, nym, act, vic)
@@ -95,15 +94,16 @@ func handle(msg *irc.Message, client *irc.Client) {
 //Returns list of nicks in channel excluding any nicks with "bot"
 //Could tweak to check against slice of bots in case of non-bot nick containing "bot"
 func updateNicks(msg *irc.Message) []string {
-	nickArray := strings.Fields(string(msg.Trailing))
-	outNicks := make([]string, 0)
-	for i := 0; i < len(nickArray); i++ {
-		nickArray[i] = strings.TrimPrefix(nickArray[i], "@")
-		if strings.Contains(strings.ToLower(nickArray[i]), "bot") {
-			continue
+	nickArray []string := strings.Fields(string(msg.Trailing))
+	outNicks := make ([]string, 0, 0)
+	for i:=0; i < len(nickArray); i++ {
+		nickArray[i] = strings.TrimPrefix(nickArray[i],"@")
+		if strings.Contains(strings.ToLower(nickArray[i]), "bot"){
+			break
 		}
 		outNicks = append(outNicks, nickArray[i])
 	}
+	
 	return outNicks
 }
 
@@ -132,15 +132,10 @@ func main() {
 	if err := client.Send("JOIN %s", *channel); err != nil {
 		log.Fatal(err)
 	}
-
-	//Sends greeting message
-	if err := client.Send("PRIVMSG %s :%s", *channel, settings.Greeting); err != nil {
-		log.Fatal(err)
-	}
-
+	
 	//Gets names of users in channel upon first joining
 	if err := client.Send("NAMES %s", *channel); err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	for {
@@ -149,25 +144,22 @@ func main() {
 			log.Fatal(err)
 		case msg := <-client.Received:
 			changed := false
-			for _, v := range changedCmds {
-				if v == string(msg.Command) {
+			for _,v := range changedCmds{
+				if v == string(msg.Command){
 					changed = true
 					break
 				}
 			}
 			switch {
-			case changed:
-				{
+				case changed: {
 					client.Send("NAMES %s", *channel)
 				}
-			case string(msg.Command) == "353":
-				{
+				case string(msg.Command) == "353": {
 					currentNicks = updateNicks(msg)
 				}
-			default:
-				go handle(msg, client)
+				default: go handle(msg, client)
 			}
-
+			
 		}
 	}
 }
