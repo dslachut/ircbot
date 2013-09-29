@@ -12,14 +12,17 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strings"
 	"time"
 )
 
 var settings struct {
-	Server  string
-	Port    int
-	Channel string
-	Nick    string
+	Server   string
+	Port     int
+	Channel  string
+	Nick     string
+	Password string
+	Greeting string
 }
 
 var server *string
@@ -27,6 +30,9 @@ var port *int
 var nick *string
 var channel *string
 
+var currentNicks []string
+
+var changedCmds = []string{"KICK", "PART", "JOIN", "QUIT"}
 var approved = []string{"dslachut", "hummus", "OgreMonk", "acan", "patty"}
 var acts = []string{"slaps", "brofists", "chases", "examines", "flicks",
 	"hugs", "mimics", "knifes", "surveils", "pokes"}
@@ -37,7 +43,7 @@ func initialize() {
 		log.Fatal(err)
 	}
 
-	settingsFile, err := os.Open(wdir + "\\settings.cfg")
+	settingsFile, err := os.Open(wdir + string(os.PathSeparator) + "settings.cfg")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -71,7 +77,7 @@ func handle(msg *irc.Message, client *irc.Client) {
 			log.Print(err)
 		} else if match {
 			act := acts[rand.Intn(len(acts))]
-			vic := approved[rand.Intn(len(approved))]
+			vic := currentNicks[rand.Intn(len(currentNicks))]
 			client.Send("MODE %s +o %s", *channel, nym)
 			client.Send("PRIVMSG %s :\u0001ACTION tries to give %s ops, then %s %s \u0001",
 				*channel, nym, act, vic)
@@ -84,6 +90,21 @@ func handle(msg *irc.Message, client *irc.Client) {
 			client.Send("PRIVMSG %s :No ops for you, %s!", *channel, nym)
 		}
 	}
+}
+
+//Returns list of nicks in channel excluding any nicks with "bot"
+//Could tweak to check against slice of bots in case of non-bot nick containing "bot"
+func updateNicks(msg *irc.Message) []string {
+	nickArray := strings.Fields(string(msg.Trailing))
+	outNicks := make([]string, 0)
+	for i := 0; i < len(nickArray); i++ {
+		nickArray[i] = strings.TrimPrefix(nickArray[i], "@")
+		if strings.Contains(strings.ToLower(nickArray[i]), "bot") {
+			continue
+		}
+		outNicks = append(outNicks, nickArray[i])
+	}
+	return outNicks
 }
 
 func main() {
@@ -112,12 +133,41 @@ func main() {
 		log.Fatal(err)
 	}
 
+	//Sends greeting message
+	if err := client.Send("PRIVMSG %s :%s", *channel, settings.Greeting); err != nil {
+		log.Fatal(err)
+	}
+
+	//Gets names of users in channel upon first joining
+	if err := client.Send("NAMES %s", *channel); err != nil {
+		log.Fatal(err)
+	}
+
 	for {
 		select {
 		case err := <-client.Error:
 			log.Fatal(err)
 		case msg := <-client.Received:
-			go handle(msg, client)
+			changed := false
+			for _, v := range changedCmds {
+				if v == string(msg.Command) {
+					changed = true
+					break
+				}
+			}
+			switch {
+			case changed:
+				{
+					client.Send("NAMES %s", *channel)
+				}
+			case string(msg.Command) == "353":
+				{
+					currentNicks = updateNicks(msg)
+				}
+			default:
+				go handle(msg, client)
+			}
+
 		}
 	}
 }
