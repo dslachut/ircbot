@@ -38,8 +38,12 @@ func initialize() {
 	}
 
 	settingsFile, err := os.Open(wdir + "\\settings.cfg")
+	//settingsFile,err := os.Open("\\settings.cfg")
 	if err != nil {
-		log.Fatal(err)
+		settingsFile, err = os.Open(wdir + "settings.conf")
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	jsonParser := json.NewDecoder(settingsFile)
