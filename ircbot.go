@@ -24,7 +24,7 @@ var settings struct {
 	Password string
 	Greeting string
 	Goodbye string
-	Bots [string][2]string
+	Bots [string][]string
 }
 
 var server *string
