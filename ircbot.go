@@ -10,7 +10,6 @@ import (
 	"log"
 	"math/rand"
 	"os"
-	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -23,8 +22,8 @@ var settings struct {
 	Nick     string
 	Password string
 	Greeting string
-	Goodbye string
-	Bots map[string][]string
+	Goodbye  string
+	Bots     map[string][]string
 }
 
 var server *string
@@ -36,7 +35,7 @@ var currentNicks []string
 var currentBots []string
 
 var changedCmds = []string{"KICK", "PART", "JOIN", "QUIT"}
-var commands = []string{"*op","*stop"}
+var commands = []string{"*op", "*stop"}
 var acts = []string{"slaps", "brofists", "chases", "examines", "flicks",
 	"hugs", "mimics", "knifes", "surveils", "pokes"}
 
@@ -65,7 +64,6 @@ func initialize() {
 func handle(msg *irc.Message, client *irc.Client) {
 	fmt.Println(msg)
 	nym := bytes.NewBuffer(msg.Nick()).String()
-	app := false
 
 	fmt.Println("Approved", nym)
 
@@ -78,7 +76,7 @@ func handle(msg *irc.Message, client *irc.Client) {
 
 //Returns list of nicks in channel excluding any nicks with "bot"
 //Could tweak to check against slice of bots in case of non-bot nick containing "bot"
-func updateNicks(msg *irc.Message) []string,[]string {
+func updateNicks(msg *irc.Message) ([]string, []string) {
 	nickArray := strings.Fields(string(msg.Trailing))
 	outNicks := make([]string, 0)
 	outBots := make([]string, 0)
@@ -87,23 +85,23 @@ func updateNicks(msg *irc.Message) []string,[]string {
 		if strings.Contains(strings.ToLower(nickArray[i]), "bot") {
 			outBots = append(outBots, nickArray[i])
 		} else {
-		    outNicks = append(outNicks, nickArray[i])
+			outNicks = append(outNicks, nickArray[i])
 		}
 	}
 	return outNicks, outBots
 }
 
 func isPrivMsg(msg *irc.Message) bool {
-    if string(msg.Command) == "PRIVMSG" && string(msg.Params) == settings.Nick {
-        return true
-    } else {
-        return false
-    }
+	if string(msg.Command) == "PRIVMSG" && string(msg.Params) == settings.Nick {
+		return true
+	} else {
+		return false
+	}
 }
 
 func nicksChanged(msg *irc.Message) bool {
-    changed := false
-    for _, v := range changedCmds {
+	changed := false
+	for _, v := range changedCmds {
 		if v == string(msg.Command) {
 			changed = true
 			break
@@ -112,20 +110,21 @@ func nicksChanged(msg *irc.Message) bool {
 	return changed
 }
 
-func goodCommand(msg *irc.Message) bool, []string{
-    cmd := false
-    trailing := strings.Fields(string(msg.Trailing))
-    for _,v := range commands {
-        if v == trailing[0]
-        isCmd = true
-        break
-    }
-    return cmd, trailing
+func goodCommand(msg *irc.Message) (bool, []string) {
+	cmd := false
+	trailing := strings.Fields(string(msg.Trailing))
+	for _, v := range commands {
+		if v == trailing[0] {
+			cmd = true
+			break
+		}
+	}
+	return cmd, trailing
 }
 
-func joinServer() {
-    if err := client.Send("NICK %s", *nick); err != nil {
-	    log.Fatal(err)
+func joinServer(client *irc.Client) {
+	if err := client.Send("NICK %s", *nick); err != nil {
+		log.Fatal(err)
 	}
 
 	if err := client.Send("USER bot * * : ..."); err != nil {
@@ -140,32 +139,32 @@ func joinServer() {
 	if err := client.Send("NAMES %s", *channel); err != nil {
 		log.Fatal(err)
 	}
-	
+
 	if len(currentBots) > 0 {
-	    target := "none"
-	    for _, v := range currentBots {
-	        if val,ok := settings.Bots[v]; ok {
-                target = val
-                break
-            }
-	    }
-        if target != "none" {
-            if err := client.Send("PRIVMSG %s : *op %s", *target, *settings.Bots[target][0]); err != nil {
-                log.Print(err)
-            }
-        } else {
-            if err := client.Send("PRIVMSG %s : opsplx", *channel); err != nil {
-	            log.Print(err)
-	        }
-        }
+		target := "none"
+		for _, v := range currentBots {
+			if _, ok := settings.Bots[v]; ok {
+				target = v
+				break
+			}
+		}
+		if target != "none" {
+			if err := client.Send("PRIVMSG %s : *op %s", target, settings.Bots[target][0]); err != nil {
+				log.Print(err)
+			}
+		} else {
+			if err := client.Send("PRIVMSG %s : opsplx", *channel); err != nil {
+				log.Print(err)
+			}
+		}
 	} else {
-	    if err := client.Send("PRIVMSG %s : opsplx", *channel); err != nil {
-	        log.Print(err)
-	    }
+		if err := client.Send("PRIVMSG %s : opsplx", *channel); err != nil {
+			log.Print(err)
+		}
 	}
 
 	//Sends greeting message
-	if err := client.Send("PRIVMSG %s :%s", *channel, *settings.Greeting); err != nil {
+	if err := client.Send("PRIVMSG %s :%s", *channel, settings.Greeting); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -184,7 +183,7 @@ func main() {
 	}
 	defer client.Close()
 
-    joinServer()
+	joinServer(client)
 
 	for {
 		select {
@@ -192,32 +191,32 @@ func main() {
 			log.Fatal(err)
 		case msg := <-client.Received:
 			switch {
-    			case nicksChanged(msg):
-    				{
-    					client.Send("NAMES %s", *channel)
-    				}
-    			case string(msg.Command) == "353":
-    				{
-    					currentNicks, currentBots = updateNicks(msg)
-    				}
-    			case isPrivMsg(msg):
-    			{
-    			    isCmd, msgText = goodCommand(msg)
-    			    if msgText[0] == "*op" {
-        			    if isCmd && msgText[1] == settings.Password{
-        			        handle(msg)
-        			    } else {
-                    		client.Send("PRIVMSG %s :No ops for you, %s!", *channel, string(msg.Nick)
-                    	}
-    			    } else if msgText[0] == "*stop" {
-    			        if isCmd && msgText[1] == settings.Password{
-        			        os.Exit(0)
-        			    } else {
-                    		client.Send("PRIVMSG %s :%s, you can't stop me!", *channel, string(msg.Nick)
-                    	}
-    			    }
-    			}
-    		}
+			case nicksChanged(msg):
+				{
+					client.Send("NAMES %s", *channel)
+				}
+			case string(msg.Command) == "353":
+				{
+					currentNicks, currentBots = updateNicks(msg)
+				}
+			case isPrivMsg(msg):
+				{
+					isCmd, msgText := goodCommand(msg)
+					if msgText[0] == "*op" {
+						if isCmd && msgText[1] == settings.Password {
+							handle(msg, client)
+						} else {
+							client.Send("PRIVMSG %s :No ops for you, %s!", *channel, string(msg.Nick()))
+						}
+					} else if msgText[0] == "*stop" {
+						if isCmd && msgText[1] == settings.Password {
+							os.Exit(0)
+						} else {
+							client.Send("PRIVMSG %s :%s, you can't stop me!", *channel, string(msg.Nick()))
+						}
+					}
+				}
+			}
 		}
 	}
 }
