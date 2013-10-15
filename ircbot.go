@@ -210,8 +210,11 @@ func main() {
 						}
 					} else if msgText[0] == "*stop" {
 						if isCmd && msgText[1] == settings.Password {
+						    client.Send("PRIVMSG %s :%s has ordered me to shutdown. Goodbye.", *channel, string(msg.Nick()))
+						    fmt.Println("%s ordered a shutdown: %s", string(msg.Nick()), time.Now())
 							os.Exit(0)
 						} else {
+						    fmt.Println("%s attempted shutdown was denied.", string(msg.Nick()))
 							client.Send("PRIVMSG %s :%s, you can't stop me!", *channel, string(msg.Nick()))
 						}
 					}
