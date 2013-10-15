@@ -20,6 +20,7 @@ var settings struct {
 	Port    int
 	Channel string
 	Nick    string
+	Actions []string
 }
 
 var server *string
@@ -70,7 +71,7 @@ func handle(msg *irc.Message, client *irc.Client) {
 		if err != nil {
 			log.Print(err)
 		} else if match {
-			act := acts[rand.Intn(len(acts))]
+			act := settings.Actions[rand.Intn(len(settings.Actions))]
 			vic := approved[rand.Intn(len(approved))]
 			client.Send("MODE %s +o %s", *channel, nym)
 			client.Send("PRIVMSG %s :\u0001ACTION tries to give %s ops, then %s %s \u0001",
